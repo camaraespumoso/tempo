@@ -205,6 +205,10 @@
                 <option value="digital">📟 Digital</option>
                 <option value="gavel">🔨 Martelo</option>
                 <option value="siren">🚨 Sirene</option>
+                <option value="triple">⚠️ Tríplice</option>
+                <option value="gong">🔘 Gongo (Grave)</option>
+                <option value="buzzer">✖️ Cigarra (Fim)</option>
+                <option value="sonar">📡 Sonar (Eco)</option>
             </select>
         </div>
         
@@ -249,7 +253,28 @@
             const gainNode = audioCtx.createGain();
             gainNode.connect(audioCtx.destination);
 
-            if (soundType === 'bell') {
+            if (soundType === 'triple') {
+                const osc = audioCtx.createOscillator();
+                osc.connect(gainNode);
+                osc.type = 'square'; 
+                osc.frequency.setValueAtTime(880, now); // Frequência aguda (Lá)
+
+                // Bip 1
+                gainNode.gain.setValueAtTime(0.3, now);
+                gainNode.gain.setValueAtTime(0, now + 0.1);
+
+                // Bip 2
+                gainNode.gain.setValueAtTime(0.3, now + 0.2);
+                gainNode.gain.setValueAtTime(0, now + 0.3);
+
+                // Bip 3
+                gainNode.gain.setValueAtTime(0.3, now + 0.4);
+                gainNode.gain.setValueAtTime(0, now + 0.5);
+
+                osc.start(now);
+                osc.stop(now + 0.6);
+            }
+            else if (soundType === 'bell') {
                 const osc = audioCtx.createOscillator();
                 osc.connect(gainNode);
                 osc.type = 'sine';
@@ -315,6 +340,64 @@
                 gainNode.gain.linearRampToValueAtTime(0, now + 0.8);
                 osc.start(now);
                 osc.stop(now + 0.8);
+            }
+            // 6. GONGO (Grave e Longo)
+            else if (soundType === 'gong') {
+                const osc = audioCtx.createOscillator();
+                osc.connect(gainNode);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(200, now); // Frequência Grave (200Hz)
+                
+                // Ataque forte e decaimento muito longo (4 segundos)
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(1.0, now + 0.1); // Batida
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 4); // Eco longo
+                
+                osc.start(now);
+                osc.stop(now + 4);
+            }
+            // 7. CIGARRA (Buzzer de Basquete/Game Show)
+            else if (soundType === 'buzzer') {
+                const osc = audioCtx.createOscillator();
+                osc.connect(gainNode);
+                osc.type = 'sawtooth'; // Onda Dente de Serra (áspera)
+                osc.frequency.setValueAtTime(110, now); // Lá grave (A2)
+                
+                // Som constante e corte seco
+                gainNode.gain.setValueAtTime(0.5, now);
+                gainNode.gain.setValueAtTime(0.5, now + 0.8);
+                gainNode.gain.linearRampToValueAtTime(0, now + 1.0);
+                
+                osc.start(now);
+                osc.stop(now + 1.0);
+            }
+            // 8. SONAR (Ping Tecnológico)
+            else if (soundType === 'sonar') {
+                const osc = audioCtx.createOscillator();
+                osc.connect(gainNode);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(1200, now); // Bem agudo
+                
+                // Ping curto
+                gainNode.gain.setValueAtTime(0, now);
+                gainNode.gain.linearRampToValueAtTime(0.5, now + 0.05);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                
+                osc.start(now);
+                osc.stop(now + 0.5);
+                
+                // (Opcional) Segundo ping para eco (delay simulado)
+                const osc2 = audioCtx.createOscillator();
+                const gain2 = audioCtx.createGain();
+                osc2.connect(gain2);
+                gain2.connect(audioCtx.destination);
+                osc2.type = 'sine';
+                osc2.frequency.setValueAtTime(1200, now + 0.4);
+                gain2.gain.setValueAtTime(0, now + 0.4);
+                gain2.gain.linearRampToValueAtTime(0.1, now + 0.45); // Mais baixo
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+                osc2.start(now + 0.4);
+                osc2.stop(now + 0.9);
             }
         }
 
@@ -436,3 +519,4 @@
     </script>
 </body>
 </html>
+
