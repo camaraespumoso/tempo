@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cronômetro Plenário - Câmara Municipal</title>
+    <style>
+        :root {
+            --bg-color: #000000;
+            --text-normal: #00ff00;   /* Verde */
+            --text-warning: #ffff00;  /* Amarelo */
+            --text-danger: #ff0000;   /* Vermelho */
+            --text-off: #333333;      /* Cinza (Desligado) */
+        }
+
+        [data-theme="light"] {
+            --bg-color: #f0f0f0;
+            --text-normal: #008000;
+            --text-warning: #d4d400;
+            --text-danger: #cc0000;
+            --text-off: #aaaaaa;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            transition: background-color 0.5s ease;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+            touch-action: manipulation;
+        }
+
+        /* --- ÁREA PRINCIPAL --- */
+        #main-stage {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding-bottom: 15vh; 
+        }
+
+        #mic-icon {
+            width: 15vh;
+            height: 15vh;
+            fill: var(--text-off);
+            transition: fill 0.3s ease, transform 0.2s ease;
+            margin-bottom: -2vh;
+        }
+
+        #timer {
+            font-size: 30vw;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            line-height: 1;
+            color: var(--text-off);
+            text-shadow: 0 0 30px rgba(0,0,0,0.5);
+            transition: color 0.3s ease;
+            z-index: 10;
+        }
+
+        /* --- ANIMAÇÕES --- */
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.9; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .pulsing { animation: pulse 2s infinite ease-in-out; }
+
+        @keyframes blinker { 50% { opacity: 0; } }
+        .blinking { animation: blinker 0.6s linear infinite; color: var(--text-danger) !important; fill: var(--text-danger) !important; }
+
+        /* Estados de Cores */
+        .normal { color: var(--text-normal) !important; fill: var(--text-normal) !important; }
+        .warning { color: var(--text-warning) !important; fill: var(--text-warning) !important; }
+        .danger { color: var(--text-danger) !important; fill: var(--text-danger) !important; }
+
+        /* --- CONTROLES --- */
+        #controls {
+            background: rgba(25, 25, 25, 0.98);
+            padding: 20px;
+            border-radius: 15px 15px 0 0;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            box-sizing: border-box;
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            box-shadow: 0 -5px 30px rgba(0,0,0,0.7);
+        }
+        
+        #controls-trigger {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 80px;
+            z-index: 999;
+        }
+
+        #controls-trigger:hover + #controls, 
+        #controls:hover,
+        #controls.active-mobile {
+            transform: translateY(0);
+        }
+
+        input, select, button {
+            padding: 12px 15px;
+            font-size: 1rem;
+            border-radius: 8px;
+            border: 1px solid #555;
+            outline: none;
+            font-weight: bold;
+            min-height: 45px; 
+        }
+
+        input, select {
+            background: #333;
+            color: white;
+            text-align: center;
+        }
+        
+        input { width: 70px; }
+        select { width: auto; flex-grow: 1; max-width: 200px; cursor: pointer; }
+
+        button {
+            cursor: pointer;
+            border: none;
+            text-transform: uppercase;
+            color: white;
+            transition: filter 0.2s, transform 0.1s;
+            flex-grow: 1;
+        }
+        button:active { transform: scale(0.98); }
+
+        .btn-start { background-color: #28a745; flex-grow: 2; }
+        .btn-stop { background-color: #dc3545; flex-grow: 2; }
+        .btn-reset { background-color: #007bff; }
+        .btn-opt { background-color: #6c757d; }
+
+        @media (max-width: 768px) {
+            #timer { font-size: 35vw; }
+            #mic-icon { width: 12vh; height: 12vh; }
+            #controls { padding: 15px; gap: 8px; transform: translateY(0); }
+            #controls-trigger { display: none; }
+            .control-row { display: flex; gap: 8px; width: 100%; justify-content: space-between; }
+            input { width: 60px; font-size: 1.2rem; }
+            select { font-size: 1rem; }
+            button { padding: 12px; font-size: 0.9rem; }
+            .btn-opt { flex-grow: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="main-stage">
+        <svg id="mic-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+        </svg>
+        <div id="timer">00:00</div>
+    </div>
+
+    <div id="controls-trigger"></div>
+
+    <div id="controls">
+        <div class="control-row" style="flex-grow: 2; display: flex; gap: 5px;">
+            <input type="number" id="minutesInput" placeholder="Min" value="5" min="0" aria-label="Minutos">
+            <input type="number" id="secondsInput" placeholder="Seg" value="0" min="0" max="59" aria-label="Segundos">
+            
+            <select id="soundType" aria-label="Tipo de Som">
+                <option value="bell">🔔 Sino</option>
+                <option value="chord" selected>🎹 Acorde</option>
+                <option value="triple">⚠️ Tríplice</option>
+                <option value="digital">📟 Digital</option>
+                <option value="gong">🔘 Gongo</option>
+                <option value="buzzer">✖️ Cigarra</option>
+                <option value="sonar">📡 Sonar</option>
+            </select>
+        </div>
+        
+        <div class="control-row" style="width: 100%; display: flex; gap: 5px;">
+            <button class="btn-start" onclick="startTimer()">Iniciar</button>
+            <button class="btn-stop" onclick="stopTimer()">Pausar</button>
+        </div>
+
+        <div class="control-row" style="width: 100%; display: flex; gap: 5px;">
+            <button class="btn-reset" onclick="resetTimer()">Reset</button>
+            <button class="btn-opt" onclick="toggleTheme()">Cor</button>
+            <button class="btn-opt" onclick="toggleFullScreen()">Tela</button>
+            <button class="btn-opt" onclick="testSound()">🔊</button>
+        </div>
+    </div>
+
+    <script>
+        let countdown;
+        let totalTime;
+        let remainingTime;
+        let isRunning = false;
+        let audioCtx;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        // --- LÓGICA DE CORES ATUALIZADA (Amarelo em 10s) ---
+        function updateVisuals(seconds, active) {
+            const display = document.getElementById('timer');
+            const icon = document.getElementById('mic-icon');
+            
+            // Limpa classes anteriores
+            display.classList.remove('normal', 'warning', 'danger', 'blinking');
+            icon.classList.remove('normal', 'warning', 'danger', 'blinking', 'pulsing');
+
+            if (!active) {
+                display.style.color = "var(--text-off)";
+                icon.style.fill = "var(--text-off)";
+                return;
+            }
+
+            if (seconds > 0) icon.classList.add('pulsing');
+
+            if (seconds === 0) {
+                // ACABOU (Pisca Vermelho)
+                display.classList.add('blinking');
+                icon.classList.add('blinking');
+            } 
+            else if (seconds <= 3) { 
+                // CRÍTICO (Vermelho - últimos 3 segundos)
+                display.classList.add('danger');
+                icon.classList.add('danger');
+            } 
+            else if (seconds <= 10) { 
+                // ATENÇÃO (Amarelo - últimos 10 segundos, como pedido)
+                display.classList.add('warning');
+                icon.classList.add('warning');
+            } 
+            else {
+                // NORMAL (Verde)
+                display.classList.add('normal');
+                icon.classList.add('normal');
+            }
+        }
+
+        // --- SINTETIZADOR DE SOM COMPLETO ---
+        function playBeep(purpose = 'end') {
+            initAudio();
+            const soundType = document.getElementById('soundType').value;
+            const now = audioCtx.currentTime;
+            const gainNode = audioCtx.createGain();
+            gainNode.connect(audioCtx.destination);
+
+            // 1. SINO
+            if (soundType === 'bell') {
+                const osc = audioCtx.createOscillator(); osc.connect(gainNode); osc.type = 'sine'; osc.frequency.setValueAtTime(392, now); 
+                gainNode.gain.setValueAtTime(0, now); gainNode.gain.linearRampToValueAtTime(0.8, now + 0.05); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 3); 
+                osc.start(now); osc.stop(now + 3);
+            } 
+            // 2. ACORDE
+            else if (soundType === 'chord') {
+                [523.25, 659.25, 783.99].forEach((f) => {
+                    const osc = audioCtx.createOscillator(); const og = audioCtx.createGain(); osc.type = 'triangle'; osc.frequency.value = f;
+                    osc.connect(og); og.connect(audioCtx.destination); og.gain.setValueAtTime(0, now); og.gain.linearRampToValueAtTime(0.2, now + 0.1); og.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+                    osc.start(now); osc.stop(now + 2.5);
+                });
+            }
+            // 3. TRÍPLICE
+            else if (soundType === 'triple') {
+                const osc = audioCtx.createOscillator(); osc.connect(gainNode); osc.type = 'square'; osc.frequency.setValueAtTime(880, now);
+                gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.setValueAtTime(0, now + 0.1);
+                gainNode.gain.setValueAtTime(0.3, now + 0.2); gainNode.gain.setValueAtTime(0, now + 0.3);
+                gainNode.gain.setValueAtTime(0.3, now + 0.4); gainNode.gain.setValueAtTime(0, now + 0.5);
+                osc.start(now); osc.stop(now + 0.6);
+            }
+            // 4. DIGITAL
+            else if (soundType === 'digital') {
+                const osc = audioCtx.createOscillator(); osc.connect(gainNode); osc.type = 'square';
+                if (purpose === 'end') { osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(880, now + 0.4); gainNode.gain.setValueAtTime(0.3, now); osc.start(now); osc.stop(now + 1.5); } 
+                else { osc.frequency.value = 880; gainNode.gain.value = 0.1; osc.start(now); osc.stop(now + 0.1); }
+            }
+            // 5. GONGO (NOVO)
+            else if (soundType === 'gong') {
+                const osc = audioCtx.createOscillator(); osc.connect(gainNode); osc.type = 'sine'; osc.frequency.setValueAtTime(200, now);
+                gainNode.gain.setValueAtTime(0, now); gainNode.gain.linearRampToValueAtTime(1.0, now + 0.1); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 4);
+                osc.start(now); osc.stop(now + 4);
+            }
+            // 6. CIGARRA (NOVO)
+            else if (soundType === 'buzzer') {
+                const osc = audioCtx.createOscillator(); osc.connect(gainNode); osc.type = 'sawtooth'; osc.frequency.setValueAtTime(110, now);
+                gainNode.gain.setValueAtTime(0.5, now); gainNode.gain.setValueAtTime(0.5, now + 0.8); gainNode.gain.linearRampToValueAtTime(0, now + 1.0);
+                osc.start(now); osc.stop(now + 1.0);
+            }
+            // 7. SONAR (NOVO)
+            else if (soundType === 'sonar') {
+                const osc = audioCtx.createOscillator(); osc.connect(gainNode); osc.type = 'sine'; osc.frequency.setValueAtTime(1200, now);
+                gainNode.gain.setValueAtTime(0, now); gainNode.gain.linearRampToValueAtTime(0.5, now + 0.05); gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+                osc.start(now); osc.stop(now + 0.5);
+            }
+        }
+
+        function testSound() { playBeep('end'); }
+
+        function displayTime(seconds) {
+            const display = document.getElementById('timer');
+            const mins = Math.floor(seconds / 60);
+            const remainderSeconds = seconds % 60;
+            const displayMin = mins < 10 ? '0' + mins : mins;
+            const displaySec = remainderSeconds < 10 ? '0' + remainderSeconds : remainderSeconds;
+            display.textContent = `${displayMin}:${displaySec}`;
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            initAudio(); 
+            if (remainingTime === undefined || remainingTime === 0) {
+                const mins = parseInt(document.getElementById('minutesInput').value) || 0;
+                const secs = parseInt(document.getElementById('secondsInput').value) || 0;
+                totalTime = (mins * 60) + secs;
+                remainingTime = totalTime;
+            }
+            if (remainingTime > 0) {
+                isRunning = true;
+                updateVisuals(remainingTime, true);
+                countdown = setInterval(() => {
+                    remainingTime--;
+                    displayTime(remainingTime);
+                    updateVisuals(remainingTime, true);
+                    if (remainingTime <= 0) {
+                        clearInterval(countdown);
+                        isRunning = false;
+                        playBeep('end');
+                        remainingTime = 0;
+                    }
+                }, 1000);
+            }
+        }
+
+        function stopTimer() {
+            clearInterval(countdown);
+            isRunning = false;
+            document.getElementById('mic-icon').classList.remove('pulsing');
+        }
+
+        function resetTimer() {
+            stopTimer();
+            remainingTime = undefined;
+            const mins = parseInt(document.getElementById('minutesInput').value) || 0;
+            const secs = parseInt(document.getElementById('secondsInput').value) || 0;
+            displayTime((mins * 60) + secs);
+            updateVisuals(0, false);
+        }
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            html.getAttribute('data-theme') === 'light' ? html.removeAttribute('data-theme') : html.setAttribute('data-theme', 'light');
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(e => { console.log("Erro Tela Cheia"); });
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+            }
+        }
+
+        resetTimer();
+        document.body.addEventListener('touchstart', function() { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); }, {once: true});
+    </script>
+</body>
+</html>
